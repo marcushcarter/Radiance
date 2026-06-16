@@ -1,13 +1,17 @@
 #pragma once
-#include <GLFW/glfw3.h>
 #include <cstdint>
 #include <functional>
 
+struct GLFWwindow;
+
+namespace Radiance
+{
 struct Window
 {
     GLFWwindow* glfwWindow = nullptr;
     uint32_t width = 1280, height = 800;
     bool fullscreen = false;
+    bool vsync = false;
 
     uint32_t windowedWidth = 1280, windowedHeight = 800;
     int windowedX = 0, windowedY = 0;
@@ -17,14 +21,19 @@ struct Window
     bool Create(const char* title, uint32_t width, uint32_t height);
     void Destroy();
 
-    bool ShouldClose();
-    void PollEvents();
+    bool ShouldClose() const;
+    void PollEvents() const;
+    void SwapBuffers() const;
 
-    void Show() const { glfwShowWindow(glfwWindow); }
-    void Hide() const { glfwHideWindow(glfwWindow); }
+    void Show() const;
+    void Hide() const;
 
     void SetFullscreen(bool enabled);
     void ToggleFullscreen() { SetFullscreen(!fullscreen); }
+    
+    void SetVsync(bool enabled);
+    void ToggleVsync() { SetVsync(!vsync); }
+
     void SetTitle(const char* title);
     void SetTitlebarColor(float r, float g, float b);
 
@@ -33,3 +42,4 @@ struct Window
 private:
     inline static Window* instance;
 };
+}

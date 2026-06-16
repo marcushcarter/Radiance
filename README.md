@@ -7,7 +7,7 @@
 
 </div>
 
-# Ballistic Path Tracing
+# Radiance
 
 <!-- Text -->
 

@@ -1,4 +1,3 @@
-#include <iostream>
 #include <windows.h>
 #include <application/application.h>
 
@@ -15,7 +14,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         freopen_s(&fp, "CONOUT$", "w", stderr);
     }
 
-    Application app;
+    Radiance::Application app;
     app.Run();
     
     return 0;

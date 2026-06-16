@@ -1,4 +1,5 @@
 #include <platform/window/window.h>
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
@@ -6,35 +7,37 @@
 #include <dwmapi.h>
 #include <iostream>
 
+namespace Radiance
+{
 bool Window::Create(const char* title, uint32_t w, uint32_t h)
 {
     if (!glfwInit()) {
-        // LOG_FATAL("Failed to initialize GLFW");
-        // std::cout << "BAD BAD BAD\n";
         return false;
     }
 
     this->width = w;
     this->height = h;
 
-    // glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_PROFILE);
-    // glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 
     glfwWindow = glfwCreateWindow(w, h, title, nullptr, nullptr);
     if (!glfwWindow) {
-        // LOG_FATAL("Failed to create GLFW window");
-        // std::cout << "BAD BAD BAD\n";
         glfwTerminate();
         return false;
     }
 
+    glfwMakeContextCurrent(glfwWindow);
+    glfwSwapInterval(0);
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        return false;
+    }
+
     glfwSetWindowUserPointer(glfwWindow, this);
-    // glfwSetFramebufferSizeCallback(glfwWindow, FramebufferSizeCallback);
-    // glfwSetKeyCallback(glfwWindow, KeyCallback);
-    // glfwSetCursorPosCallback(glfwWindow, MouseCallback);
-    // glfwSetJoystickCallback(JoystickCallback);
 
     glfwSetFramebufferSizeCallback(glfwWindow, [](GLFWwindow* win, int w, int h) {
         auto* self = static_cast<Window*>(glfwGetWindowUserPointer(win));
@@ -45,7 +48,6 @@ bool Window::Create(const char* title, uint32_t w, uint32_t h)
 
     instance = this;
 
-    // LOG_DEBUG("Window created: %dx%d", w, h);
     return true;
 }
 
@@ -55,13 +57,18 @@ void Window::Destroy()
         glfwDestroyWindow(glfwWindow);
         glfwTerminate();
         glfwWindow = nullptr;
-        // LOG_DEBUG("Window destroyed");
     }
 }
 
-bool Window::ShouldClose() { return glfwWindowShouldClose(glfwWindow); }
+bool Window::ShouldClose() const { return glfwWindowShouldClose(glfwWindow); }
 
-void Window::PollEvents() { glfwPollEvents(); }
+void Window::PollEvents() const { glfwPollEvents(); }
+
+void Window::SwapBuffers() const { glfwSwapBuffers(glfwWindow); }
+
+void Window::Show() const { glfwShowWindow(glfwWindow); }
+
+void Window::Hide() const { glfwHideWindow(glfwWindow); }
 
 void Window::SetFullscreen(bool enabled)
 {
@@ -84,11 +91,19 @@ void Window::SetFullscreen(bool enabled)
     }
 }
 
+void Window::SetVsync(bool enabled)
+{
+    if (vsync == enabled) return;
+    vsync = enabled;
+    glfwSwapInterval(vsync ? 1 : 0);
+}
+
 void Window::SetTitle(const char* title) { if (glfwWindow) glfwSetWindowTitle(glfwWindow, title); }
 
 void Window::SetTitlebarColor(float r, float g, float b)
 {
-    // HWND hwnd = glfwGetWin32Window(glfwWindow);
-    // COLORREF color = RGB((int)(r * 255), (int)(g * 255), (int)(b * 255));
-    // DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
+    HWND hwnd = glfwGetWin32Window(glfwWindow);
+    COLORREF color = RGB((int)(r * 255), (int)(g * 255), (int)(b * 255));
+    DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
+}
 }

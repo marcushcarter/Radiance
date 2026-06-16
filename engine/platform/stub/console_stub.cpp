@@ -8,7 +8,7 @@ int main()
 
     std::string path(dir);
     path = path.substr(0, path.find_last_of("\\/") + 1);
-    path += "Radiance_v" BALLISTIC_VERSION_STR "_win64.exe";
+    path += "Radiance_v" RADIANCE_VERSION_STR "_win64.exe";
 
     LPSTR cmdLine = GetCommandLineA();
 
