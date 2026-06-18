@@ -1,4 +1,5 @@
 #version 460 core
+#extension GL_ARB_bindless_texture : require
 layout (local_size_x = 8, local_size_y = 8) in;
 
 layout (rgba32f, binding = 0) uniform image2D uOutput;
@@ -135,8 +136,12 @@ bool sceneHit(vec3 ro, vec3 rd, out Hit rec) {
 }
 
 vec3 skyColor(vec3 rd) {
+    // vec3 d = normalize(rd);
+    // vec2 uv = vec2(atan(d.z, d.x) * 0.15915494 + 0.5, 0.5 - asin(clamp(d.y, -1.0, 1.0)) * 0.31830989); // * 1/pi
+    // return texture(uEnvMap, uv).rgb;
+
     vec3 d = normalize(rd);
-    vec2 uv = vec2(atan(d.z, d.x) * 0.15915494 + 0.5, 0.5 - asin(clamp(d.y, -1.0, 1.0)) * 0.31830989); // * 1/pi
+    vec2 uv = vec2(atan(d.z, d.x) * 0.15915494 + 0.5, 0.5 - asin(clamp(d.y, -1.0, 1.0)) * 0.31830989);
     return texture(uEnvMap, uv).rgb;
 }
 

@@ -18,21 +18,34 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/Release)
 
 include(CompilerOptions)
 include(Platform)
+include(EmbedAssets)
 
 add_subdirectory(thirdparty)
 add_subdirectory(engine)
 
+set(RADIANCE_GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
+file(MAKE_DIRECTORY ${RADIANCE_GENERATED_DIR})
+
+radiance_generate_asset_rc(
+    ${RADIANCE_GENERATED_DIR}/embedded_assets.rc
+    ${CMAKE_SOURCE_DIR}/assets/shaders
+    ${CMAKE_SOURCE_DIR}/assets/textures
+    ${CMAKE_SOURCE_DIR}/assets/skybox
+)
+
 add_executable(RadianceApp WIN32
     engine/application/main.cpp
-    assets/ballistic.rc
+    assets/icons/radiance.rc
+    ${RADIANCE_GENERATED_DIR}/embedded_assets.rc
 )
+
 set_target_properties(RadianceApp PROPERTIES OUTPUT_NAME "Radiance_v${RADIANCE_VERSION}_win64")
 target_link_libraries(RadianceApp PRIVATE radiance)
 target_compile_definitions(RadianceApp PRIVATE RADIANCE_VERSION_STR = "${RADIANCE_VERSION}")
 
 add_executable(RadianceConsole
     engine/platform/stub/console_stub.cpp
-    assets/ballistic_console.rc
+    assets/icons/radiance_console.rc
 )
 set_target_properties(RadianceConsole PROPERTIES OUTPUT_NAME "Radiance_v${RADIANCE_VERSION}_win64_console")
 target_compile_definitions(RadianceConsole PRIVATE RADIANCE_VERSION_STR="${RADIANCE_VERSION}")

@@ -21,7 +21,11 @@ void Application::Run()
             case Renderer::ViewportMode::Clay: renderer.RasterizeScene(scene); break;
             case Renderer::ViewportMode::Pathtrace: renderer.PathtraceTick(scene); break;
         }
-        renderer.BlitToScreen();
+        // renderer.BlitToScreen();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClearColor(0,0,0,1);
+        glClear(GL_COLOR_BUFFER_BIT);
 
         imgui.RecordDraw();
         window.SwapBuffers();
@@ -44,9 +48,9 @@ void Application::Setup()
 
     window.Create("Radiance", 1280, 800);
     window.SetTitlebarColor(0.15f, 0.15f,0.15f);
-    window.onFramebufferResize = [this](uint32_t w, uint32_t h) {
-        renderer.RequestResize(w, h);
-    };
+    // window.onFramebufferResize = [this](uint32_t w, uint32_t h) {
+    //     renderer.RequestResize(w, h);
+    // };
 
     imgui.Create(window.GetNative());
 
@@ -69,11 +73,13 @@ void Application::BuildEditorUI()
         ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
-        ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
+        ImGuiWindowFlags_NoNavFocus;
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + 20));
-    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - 20));
+    // ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + 20));
+    // ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - 20));
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + m_menuBarHeight));
+    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - m_menuBarHeight));
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -91,100 +97,108 @@ void Application::BuildEditorUI()
     float targetAlpha = pathtracing ? 0.0f : 1.0f;
     uiAlpha += (targetAlpha - uiAlpha) * min(ImGui::GetIO().DeltaTime * 8.0f, 1.0f);
     
-    DrawMenuBar(uiAlpha);
-    DrawPathtracingToggle(ImGui::GetIO().DeltaTime);
+    DrawMenuBar();
+    DrawViewport();
+    DrawSceneInspector();
+    DrawRenderSettings();
 
     imgui.Render();
 }
 
-void Application::DrawMenuBar(float uiAlpha)
+void Application::DrawViewport()
 {
-    bool pathtracing = renderer.viewportMode == Renderer::ViewportMode::Pathtrace;
-    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, uiAlpha);
-    if (pathtracing) ImGui::BeginDisabled();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::Begin("Viewport");
 
-    if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New")) {}
-            if (ImGui::MenuItem("Open...")) {}
-            if (ImGui::MenuItem("Save", "Ctrl+S")) {}
-            if (ImGui::MenuItem("Save As...")) {}
-            ImGui::Separator();
-            if (ImGui::MenuItem("Exit")) Close();
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("View")) {
-            if (ImGui::MenuItem("Reset Layout")) {}
-            ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
-    
-    if (pathtracing) ImGui::EndDisabled();
-    ImGui::PopStyleVar();
-}
+    m_viewportPos = ImGui::GetWindowPos();
 
-void Application::DrawPathtracingToggle(float dt)
-{
-    static float t = 0.0f;
-    static float colorT = 0.0f;
-    
-    bool pathtracing = renderer.viewportMode == Renderer::ViewportMode::Pathtrace;
-    float target = pathtracing ? 1.0f : 0.0f;
-    t += (target - t) * min(dt * 10.0f, 1.0f);
-    if (pathtracing) colorT += dt * 0.4f;
+    ImVec2 size = ImGui::GetContentRegionAvail();
+    if (size.x > 0 && size.y > 0) {
+        uint32_t w = (uint32_t)size.x;
+        uint32_t h = (uint32_t)size.y;
+        if (w != renderer.viewportWidth || h != renderer.viewportHeight)
+            renderer.RequestResize(w, h);
 
-    float hue = 0.65f + 0.1f * sinf(colorT * 3.14159f * 2.0f);
-    float sat = 0.75f, val = 0.85f;
-
-    ImVec4 onColor = ImColor::HSV(hue, sat, val);
-    ImVec4 offColor = ImVec4(0.32f, 0.32f, 0.32f, 1.0f);
-    ImVec4 bgColor = ImVec4(
-        offColor.x + (onColor.x - offColor.x) * t,
-        offColor.y + (onColor.y - offColor.y) * t,
-        offColor.z + (onColor.z - offColor.z) * t,
-        1.0f
-    );
-
-    ImGui::SetNextWindowPos(ImVec2(16, 16 + ImGui::GetFrameHeight()), ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.0f);
-    ImGui::SetNextWindowSize(ImVec2(200, 48), ImGuiCond_Always);
-    ImGui::Begin("##toggle_overlay", nullptr,
-        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDocking);
-
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-
-    const float W = 56.0f, H = 28.0f, R = H * 0.5f;
-
-    ImU32 bg = ImColor(bgColor);
-    dl->AddRectFilled(ImVec2(pos.x + R, pos.y), ImVec2(pos.x + W - R, pos.y + H), bg);
-    dl->AddCircleFilled(ImVec2(pos.x + R, pos.y + R), R, bg);
-    dl->AddCircleFilled(ImVec2(pos.x + W - R, pos.y + R), R, bg);
-
-    if (t > 0.01f) {
-        ImU32 glowColor = ImColor(onColor.x, onColor.y, onColor.z, t * 0.35f);
-        dl->AddCircleFilled(ImVec2(pos.x + R, pos.y + R), R + 3.0f, glowColor);
-        dl->AddCircleFilled(ImVec2(pos.x + W - R, pos.y + R), R + 3.0f, glowColor);
-        dl->AddRectFilled(ImVec2(pos.x + R, pos.y - 3.0f), ImVec2(pos.x + W - R, pos.y + H + 3.0f), glowColor);
-    }
-
-    float knobX = pos.x + R + t * (W - H);
-    dl->AddCircleFilled(ImVec2(knobX, pos.y + R), R - 3.0f, IM_COL32(230, 230, 230, 255));
-
-    ImGui::InvisibleButton("##toggle", ImVec2(W, H));
-    if (ImGui::IsItemClicked()) {
-        if (pathtracing) renderer.ExitPathtrace();
-        else renderer.EnterPathtrace(scene);
-    }
-
-    if (t > 0.3f) {
-        ImGui::SameLine(0, 8);
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 6);
-        ImGui::TextColored(ImVec4(onColor.x, onColor.y, onColor.z, t), "SPP %u", renderer.sampleCount);
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        ImGui::Image((ImTextureID)(uint64_t)renderer.image.Get(), size, ImVec2(0, 1), ImVec2(1, 0));
     }
 
     ImGui::End();
+    ImGui::PopStyleVar();
+}
+
+void Application::DrawMenuBar()
+{
+    const float barHeight = 48.0f;
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+
+    ImGui::SetNextWindowPos(vp->Pos);
+    ImGui::SetNextWindowSize(ImVec2(vp->Size.x, barHeight));
+    ImGui::SetNextWindowViewport(vp->ID);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 0.0f));
+
+    ImGui::Begin("##menubar", nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoResize     | ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
+        ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+    ImGui::PopStyleVar(3);
+
+    float rowY = (barHeight - ImGui::GetFrameHeight()) * 0.5f;
+    ImGui::SetCursorPos(ImVec2(12.0f, rowY));
+
+    // File menu (as a button + popup, not a native menu bar)
+    if (ImGui::Button("File")) ImGui::OpenPopup("FilePopup");
+    if (ImGui::BeginPopup("FilePopup")) {
+        if (ImGui::MenuItem("New")) {}
+        if (ImGui::MenuItem("Open...")) {}
+        if (ImGui::MenuItem("Save", "Ctrl+S")) {}
+        if (ImGui::MenuItem("Save As...")) {}
+        ImGui::Separator();
+        if (ImGui::MenuItem("Exit")) Close();
+        ImGui::EndPopup();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("View")) ImGui::OpenPopup("ViewPopup");
+    if (ImGui::BeginPopup("ViewPopup")) {
+        if (ImGui::MenuItem("Reset Layout")) {}
+        ImGui::EndPopup();
+    }
+
+    // centered play/pause button, same row
+    bool pathtracing = renderer.viewportMode == Renderer::ViewportMode::Pathtrace;
+    ImVec2 btnSize = ImVec2(72.0f, ImGui::GetFrameHeight());
+    float centerX  = (vp->Size.x - btnSize.x) * 0.5f;
+
+    ImGui::SameLine(centerX);
+    if (ImGui::Button(pathtracing ? "Pause" : "Render", btnSize)) {
+        if (pathtracing) renderer.ExitPathtrace();
+        else             renderer.EnterPathtrace(scene);
+    }
+
+    // right aligned disabled text, same row
+    const char* rightText = pathtracing ? "rendering..." : "ready";
+    ImVec2 textSize = ImGui::CalcTextSize(rightText);
+    ImGui::SameLine(vp->Size.x - textSize.x - 24.0f);
+    ImGui::SetCursorPosY(rowY + (ImGui::GetFrameHeight() - textSize.y) * 0.5f);
+    ImGui::TextDisabled("%s", rightText);
+
+    ImGui::End();
+}
+
+void Application::DrawSceneInspector()
+{
+
+}
+
+void Application::DrawRenderSettings()
+{
+
 }
 }

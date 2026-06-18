@@ -26,7 +26,12 @@ struct Application
     void Shutdown();
     
     void BuildEditorUI();
-    void DrawMenuBar(float uiAlpha);
-    void DrawPathtracingToggle(float dt);
+    void DrawViewport();
+    void DrawMenuBar();
+    void DrawSceneInspector();
+    void DrawRenderSettings();
+
+
+float m_menuBarHeight = 48.0f;
 };
 }
