@@ -1,4 +1,5 @@
 #include <platform/window/window.h>
+#include <platform/embedded/embedded_asset.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -6,6 +7,7 @@
 #include <windows.h>
 #include <dwmapi.h>
 #include <iostream>
+#include <stb_image.h>
 
 namespace Radiance
 {
@@ -105,5 +107,24 @@ void Window::SetTitlebarColor(float r, float g, float b)
     HWND hwnd = glfwGetWin32Window(glfwWindow);
     COLORREF color = RGB((int)(r * 255), (int)(g * 255), (int)(b * 255));
     DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &color, sizeof(color));
+}
+
+void Window::SetIcon(const char* resourceName)
+{
+    auto bytes = EmbeddedAsset::LoadBinary(resourceName);
+    if (bytes.empty()) return;
+
+    int w, h, channels;
+    unsigned char* pixels = stbi_load_from_memory(bytes.data(), (int)bytes.size(), &w, &h, &channels, 4);
+    if (!pixels) return;
+
+    GLFWimage icon;
+    icon.width  = w;
+    icon.height = h;
+    icon.pixels = pixels;
+
+    glfwSetWindowIcon(glfwWindow, 1, &icon);
+
+    stbi_image_free(pixels);
 }
 }

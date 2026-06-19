@@ -37,6 +37,8 @@ struct Window
     void SetTitle(const char* title);
     void SetTitlebarColor(float r, float g, float b);
 
+    void SetIcon(const char* resourceName);
+
     GLFWwindow* GetNative() { return glfwWindow; }
 
 private:

@@ -7,7 +7,7 @@
 
 </div>
 
-# Radiance
+# **Radiance** Modelling and Rendering Engine
 
 <!-- Text -->
 

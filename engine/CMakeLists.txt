@@ -17,6 +17,7 @@ target_link_libraries(radiance
         glm
         imgui
         stb
+        IconFontCppHeaders
     PRIVATE
         dwmapi
 )

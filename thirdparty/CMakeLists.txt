@@ -19,8 +19,8 @@ add_library(imgui STATIC ${IMGUI_SRC})
 target_include_directories(imgui PUBLIC imgui)
 target_link_libraries(imgui PUBLIC glfw)
 
-# add_library(IconFontCppHeaders INTERFACE)
-# target_include_directories(IconFontCppHeaders INTERFACE IconFontCppHeaders)
+add_library(IconFontCppHeaders INTERFACE)
+target_include_directories(IconFontCppHeaders INTERFACE IconFontCppHeaders)
 
 # add_library(tinyfiledialogs STATIC tinyfiledialogs/tinyfiledialogs.c)
 # target_include_directories(tinyfiledialogs PUBLIC tinyfiledialogs)

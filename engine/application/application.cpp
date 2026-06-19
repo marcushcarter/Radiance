@@ -1,10 +1,11 @@
 #include <application/application.h>
 #include <glad/glad.h>
 #include <imgui.h>
-
 #include <windows.h>
 #include <shlobj.h>
 #include <filesystem>
+#include "IconsFontAwesome6.h"
+#include <platform/embedded/embedded_asset.h>
 
 namespace Radiance
 {
@@ -21,9 +22,8 @@ void Application::Run()
             case Renderer::ViewportMode::Clay: renderer.RasterizeScene(scene); break;
             case Renderer::ViewportMode::Pathtrace: renderer.PathtraceTick(scene); break;
         }
-        // renderer.BlitToScreen();
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        OpenGL::Framebuffer::Unbind();
         glClearColor(0,0,0,1);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -48,13 +48,37 @@ void Application::Setup()
 
     window.Create("Radiance", 1280, 800);
     window.SetTitlebarColor(0.15f, 0.15f,0.15f);
-    // window.onFramebufferResize = [this](uint32_t w, uint32_t h) {
-    //     renderer.RequestResize(w, h);
-    // };
+    window.SetIcon("LOGOS_FAVICON_PNG");
 
     imgui.Create(window.GetNative());
+    
+    ImGuiIO& io = ImGui::GetIO();
+    io.IniFilename = iniPath.c_str();
 
-    ImGui::GetIO().IniFilename = iniPath.c_str();
+    {
+        std::vector<uint8_t> jbData = EmbeddedAsset::LoadBinary("FONTS_JETBRAINS_MONO_REGULAR_TTF");
+        if (!jbData.empty()) {
+            void* jbCopy = IM_ALLOC(jbData.size());
+            memcpy(jbCopy, jbData.data(), jbData.size());
+            ImFontConfig jbCfg;
+            jbCfg.FontDataOwnedByAtlas = true;
+            io.Fonts->AddFontFromMemoryTTF(jbCopy, (int)jbData.size(), 14.0f, &jbCfg);
+        }
+
+        std::vector<uint8_t> faData = EmbeddedAsset::LoadBinary("FONTS_FA_SOLID_900_OTF");
+        if (!faData.empty()) {
+            void* faCopy = IM_ALLOC(faData.size());
+            memcpy(faCopy, faData.data(), faData.size());
+            static const ImWchar faRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+            ImFontConfig faCfg;
+            faCfg.MergeMode = true;
+            faCfg.PixelSnapH = true;
+            faCfg.FontDataOwnedByAtlas = true;
+            io.Fonts->AddFontFromMemoryTTF(faCopy, (int)faData.size(), 14.0f, &faCfg, faRanges);
+        }
+
+        io.Fonts->Build();
+    }
 
     renderer.Start(window.width, window.height);
 }
@@ -91,11 +115,6 @@ void Application::BuildEditorUI()
     ImGuiID id = ImGui::GetID("MainDockspace");
     ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
     ImGui::End();
-
-    static float uiAlpha = 1.0f;
-    bool pathtracing = renderer.viewportMode == Renderer::ViewportMode::Pathtrace;
-    float targetAlpha = pathtracing ? 0.0f : 1.0f;
-    uiAlpha += (targetAlpha - uiAlpha) * min(ImGui::GetIO().DeltaTime * 8.0f, 1.0f);
     
     DrawMenuBar();
     DrawViewport();
@@ -108,7 +127,7 @@ void Application::BuildEditorUI()
 void Application::DrawViewport()
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("Viewport");
+    ImGui::Begin(ICON_FA_EYE " Viewport");
 
     m_viewportPos = ImGui::GetWindowPos();
 
@@ -143,7 +162,7 @@ void Application::DrawMenuBar()
 
     ImGui::Begin("##menubar", nullptr,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoResize     | ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
         ImGuiWindowFlags_NoBringToFrontOnFocus);
 
@@ -171,18 +190,16 @@ void Application::DrawMenuBar()
         ImGui::EndPopup();
     }
 
-    // centered play/pause button, same row
     bool pathtracing = renderer.viewportMode == Renderer::ViewportMode::Pathtrace;
     ImVec2 btnSize = ImVec2(72.0f, ImGui::GetFrameHeight());
-    float centerX  = (vp->Size.x - btnSize.x) * 0.5f;
+    float centerX = (vp->Size.x - btnSize.x) * 0.5f;
 
     ImGui::SameLine(centerX);
-    if (ImGui::Button(pathtracing ? "Pause" : "Render", btnSize)) {
+    if (ImGui::Button(pathtracing ? ICON_FA_PAUSE : ICON_FA_PLAY, btnSize)) {
         if (pathtracing) renderer.ExitPathtrace();
-        else             renderer.EnterPathtrace(scene);
+        else renderer.EnterPathtrace(scene);
     }
 
-    // right aligned disabled text, same row
     const char* rightText = pathtracing ? "rendering..." : "ready";
     ImVec2 textSize = ImGui::CalcTextSize(rightText);
     ImGui::SameLine(vp->Size.x - textSize.x - 24.0f);
@@ -194,7 +211,17 @@ void Application::DrawMenuBar()
 
 void Application::DrawSceneInspector()
 {
-
+    ImGui::Begin("Scene Heirarchy");
+    ImGui::End();
+    
+    ImGui::Begin("Inspector");
+    ImGui::End();
+    
+    ImGui::Begin("Render Settings");
+    ImGui::End();
+    
+    ImGui::Begin("Profiler");
+    ImGui::End();
 }
 
 void Application::DrawRenderSettings()

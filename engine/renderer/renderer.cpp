@@ -43,7 +43,7 @@ void Renderer::Start(uint32_t w, uint32_t h)
         }
     }
 
-    pathtracingShader.Load("", "", EmbeddedAsset::LoadText("SHADERS_RAYTRACE_COMP"));
+    pathtracingShader.Load("", "", EmbeddedAsset::LoadText("SHADERS_PATHTRACE_COMP"));
     
     cameraUBO.Create(sizeof(CameraData));
 }
@@ -111,7 +111,7 @@ void Renderer::RasterizeScene(const Scene& scene)
     cameraUBO.Update(&camData);
 
     framebuffer.Bind();
-    glClearColor(0,0,0,1);
+    glClearColor(1,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
